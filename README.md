@@ -12,7 +12,10 @@ Majority of the Assests from Underwater Diving set at https://opengameart.org/co
 
 Current Enemy List:
 
-Sea_Urchin: A mostly stationary hazard
+Sea_Urchin: A mostly stationary hazard.
+
 Mine: A bomb that bounces between the roof and floor at slow speed.
-Feesh: A slow moving fish that turns around when it collides with a wall/
+
+Feesh: A slow moving fish that turns around when it collides with a wall.
+
 Big_Feesh: A Large Fish that charges at high speeed when it sees the player in front of it until it slams into a wall, stunning it briefly.

@@ -15,7 +15,7 @@ fps = 60
 screen_width = 1000
 screen_height = 800
 screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption('Octupus Game')
+pygame.display.set_caption('Tentacave')
 
 #define game variables
 SCROLL_THRESH = 200
@@ -55,6 +55,11 @@ start_img = pygame.image.load('img/start.png')
 start_img = pygame.transform.scale(start_img, (600, 108))
 complete_img = pygame.image.load('img/complete.png')
 complete_img = pygame.transform.scale(complete_img, (750, 108))
+octo_img = []
+for num in range(1, 11):
+    img = pygame.image.load(f'Assets/Octo_Sprites/Idle{num}.png')
+    #img = pygame.transform.scale(img, (66,58))
+    octo_img.append(img)
 
 class Button():
     def __init__(self, x, y, image):
@@ -713,7 +718,7 @@ moving_left = False
 moving_right = False
 moving_up = False
 moving_down = False
-
+count = 0
 while run:
 
     dt = clock.tick(fps)
@@ -787,7 +792,11 @@ while run:
         if(exit_button.draw()):
             run=False
     elif game_state ==3:
+        screen.blit(octo_img[count//2], (screen_width//2-175,screen_height//3-150))
         screen.blit(start_img, (screen_width//2-300,screen_height//3-100))
+        count+=1
+        if count >=20:
+            count = 0
         if(play_button.draw()):
             game_state=0
         if(exit_button.draw()):

@@ -1,4 +1,4 @@
-from os import urandom
+from os import truncate
 import pygame
 import pygame.math
 from pygame import draw
@@ -6,7 +6,6 @@ from pygame.locals import *
 from pygame.sprite import Sprite
 from spritesheet import SpriteSheet
 import csv
-from random import seed
 from random import randint
 
 pygame.init()
@@ -22,7 +21,7 @@ pygame.display.set_caption('Octupus Game')
 SCROLL_THRESH = 200
 ROWS = 16
 COLS = 150
-TILE_TYPES = 19
+TILE_TYPES = 21
 ACCELERATION = 2
 WATRES = 0.5
 tile_size = screen_height//ROWS
@@ -32,7 +31,7 @@ game_state = 3
 screen_scroll = 0
 bg_scroll = 0
 playerspawn = [500, 500]
-level = 0
+level = 1
 numlevels = 2
 vec = pygame.math.Vector2
 #load tiles
@@ -82,6 +81,73 @@ class Button():
         screen.blit(self.image, self.rect)
 
         return action
+
+
+class Enemy():
+    #pass in a rectangle and speed in the x and y directions
+    def __init__(self, image, x, y,  hitbox, speedx, speedy):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.hitbox = hitbox
+        self.speedx = speedx
+        self.speedy = speedy
+        self.width = hitbox.width
+        self.heigh = hitbox.height
+    def move(self, moving_left, moving_right, moving_up, moving_down):
+        collide = False
+        dx = 0
+        dy = 0
+        temp_rect = self.hitbox
+        #x followed by y
+        if moving_down:
+            dy += self.speedy
+        if moving_right:
+            dx += self.speedx
+        if moving_up:
+            dy -= self.speedy
+        if moving_left:
+            dx -= self.speedx
+        collide, dx, dy = self.collide(dx,dy)
+        self.rect.x += dx
+        self.hitbox.x += dx
+        self.rect.y += dy
+        self.hitbox.y += dy
+        return collide
+
+    def collide(self, dx, dy):
+        collide = False
+        for tile in world.obstacle_list:
+            #x direction
+            if tile[2].colliderect(self.hitbox.x+dx, self.hitbox.y, self.width, self.height):
+                #check if on right side of block
+                if dx < 0:
+                    dx = 0
+                    collide = True
+                #check if on left side of block
+                if dx > 0:
+                    dx = 0
+                    collide = True
+            #y direction
+            if tile[2].colliderect(self.hitbox.x, self.hitbox.y + dy, self.width, self.height):
+                #check if below the block
+                if dy < 0:
+                    dy = 0
+                    collide = True
+                #check if above the block
+                if dy > 0:
+                    dy = 0
+                    collide = True
+        return collide, dx, dy
+
+
+
+
+
+
+
+
 
 class Player():
     def __init__(self, x, y):
@@ -281,6 +347,7 @@ def reset_level():
     chest_group.empty()
     feesh_group.empty()
     urchin_group.empty()
+    beegfeesh_group.empty()
     data = []
     for row in range(ROWS):
             r = [-1]*COLS
@@ -338,7 +405,7 @@ class World():
                 elif tile == 13:
                     #Randomizer for height
                     random_int = randint(-50, 50)
-                    mine = Mine(x*tile_size, y*tile_size +random_int, random_int, 100)
+                    mine = Mine(x*tile_size, y*tile_size)
                     mine_group.add(mine)
                 elif tile == 14:
                     feesh = Feesh(x*tile_size, y*tile_size)
@@ -350,9 +417,15 @@ class World():
                     urchin = Urchin(x*tile_size, y*tile_size)
                     urchin_group.add(urchin)       
                 elif tile == 17:
+                    beegfeeshR = Beegfeesh(x*tile_size, y*tile_size, True)
+                    beegfeesh_group.add(beegfeeshR) 
+                elif tile == 18:
+                    beegfeeshL = Beegfeesh(x*tile_size, y*tile_size, False)
+                    beegfeesh_group.add(beegfeeshL)
+                elif tile == 19:
                     chest = Chest(x*tile_size, y*tile_size)
                     chest_group.add(chest)
-                elif tile == 18:
+                elif tile == 20:
                     playerspawn = (x*tile_size, y*tile_size)
         return playerspawn
     def draw (self):
@@ -379,10 +452,10 @@ class Chest(pygame.sprite.Sprite):
         self.rect.x+=screen_scroll
         
 
-class Urchin(pygame.sprite.Sprite):
+class Urchin(Enemy, pygame.sprite.Sprite):
     def __init__(self,x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.images = []
+        #self.images = []
         #self.index = 0
         #self.count = 1
         #if (direction == 1 or direction == 2):
@@ -401,8 +474,13 @@ class Urchin(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.speedx = 1
+        self.speedy = 2
+        self.width = 30
+        self.height = 30
+        self.count = 0
     def update(self):
-        #pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
+        pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
         #self.image = self.images[self.index]
         #if(self.count%10 == 0):
             #dosomething
@@ -412,41 +490,78 @@ class Urchin(pygame.sprite.Sprite):
         #    self.index = 0
         #self.count+=1
         #scroll
+        if self.rect.right > 0 and self.rect.left < screen_width:
+            self.ai()
         self.hitbox.x+=screen_scroll
-        self.rect.x+=screen_scroll             
+        self.rect.x+=screen_scroll   
+    def ai(self):
+        #little hops back and forth, adorable
+        self.count+=1
+        moving_left = False
+        moving_right = False
+        moving_down = False
+        moving_up = False
+        if self.count<=6:
+            moving_left = True
+        if self.count>6:
+            moving_right = True
+        if self.count <= 3 or (self.count>6 and self.count<=9):
+            moving_up = True
+        if (self.count <= 6 and self.count>3) or self.count > 9:
+            moving_down = True
+        if self.count>=12: 
+            self.count=0
+        self.move(moving_left, moving_right, moving_up, moving_down)
 
-class Mine(pygame.sprite.Sprite):
-    def __init__(self,x, y, bob, bob_max):
+
+
+class Mine(Enemy, pygame.sprite.Sprite):
+    direction = 1
+    def __init__(self,x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load('img/tile/Enemies/mine.png')
-        self.hitbox = pygame.Rect(x+6, y+8, 30, 30)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.bob_direction = 1
-        self.bob_counter = bob
-        self.bob_max = bob_max
+        self.speedx = 0
+        Mine.direction+=1
+        if Mine.direction==2:
+            Mine.direction = -1
+        else:
+            Mine.direction = 1
+        self.speedy = Mine.direction * 2
+        self.width = 30
+        self.height = 30
+        self.count = 0
+        self.hitbox = pygame.Rect(x+6, y+8, self.width, self.height)
     def update(self):
-        #pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
-        if self.bob_counter%5:
-            self.rect.y += (self.bob_direction)
-            self.hitbox.y += (self.bob_direction)
-        self.bob_counter += 1
-        if abs(self.bob_counter) > self.bob_max:
-            self.bob_direction *= -1
-            self.bob_counter *=-1
+        pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
+        if self.rect.right > 0 and self.rect.left < screen_width:
+            self.ai()
         #scroll
         self.hitbox.x+=screen_scroll
         self.rect.x+=screen_scroll
+    def ai(self):
+        collide = False
+        self.count += 1
+        moving_left = False
+        moving_right = False
+        moving_down = False
+        moving_up = True
+        collide = self.move(moving_left, moving_right, moving_up, moving_down)
+        if collide:
+            self.speedy *= -1
 
-class Feesh(pygame.sprite.Sprite):
+class Feesh(Enemy, pygame.sprite.Sprite):
     def __init__(self,x, y):
             pygame.sprite.Sprite.__init__(self)
             feesh = SpriteSheet('img/tile/Enemies/feesh.png')
             self.images = []
             self.index = 0
             self.elapsed = 0
-            self.hitbox = pygame.Rect(x+1, y+12, 75, 46)
+            self.height = 46
+            self. width = 76
+            self.hitbox = pygame.Rect(x+1, y+12+25, self.width, self.height)
             margin = 2
             for num in range(1, 5):
                 feesh_rect = ((margin*num)+(26*(num-1)), margin, 26, 20)
@@ -455,32 +570,121 @@ class Feesh(pygame.sprite.Sprite):
                 self.images.append(self.img)
             self.rect = self.img.get_rect()
             self.rect.x = x
-            self.rect.y = y
-            self.move_direction = 3
-            self.move_counter = 0
-    def update(self):
-        #pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
-        self.rect.x += self.move_direction
-        self.hitbox.x += self.move_direction
-        self.move_counter += 1
-        if abs(self.move_counter) > 75:
-            self.move_direction *= -1
-            self.move_counter *=-1
-        if self.move_direction > 0:
+            self.rect.y = y+25
+            self.speedx = 3
+            self.speedy = 0
             self.image = self.images[self.index]
-        elif self.move_direction < 0:
-            self.image = pygame.transform.flip(self.images[self.index], True, False)
-        #add number of ticks transpired
-        self.elapsed += dt
-        #Limits update frequency
-        if self.elapsed >= 100:
-            self.index+=1
-            if self.index == 4:
-                self.index = 0
-            self.elapsed = 0
+            self.move_counter = 0
+            self.moving_left = False
+            self.moving_right = True
+            self.moving_down = False
+            self.moving_up = False
+    def update(self):
+        pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
+        if self.rect.right > 0 and self.rect.left < screen_width:
+            self.ai()
+            if self.moving_right:
+                self.image = self.images[self.index]
+            elif self.moving_left:
+                self.image = pygame.transform.flip(self.images[self.index], True, False)
+            #add number of ticks transpired
+            self.elapsed += dt
+            #Limits update frequency
+            if self.elapsed >= 100:
+                self.index+=1
+                if self.index == 4:
+                    self.index = 0
+                self.elapsed = 0
         #scroll
         self.hitbox.x+=screen_scroll
         self.rect.x+=screen_scroll
+    def ai(self):
+        collide=False
+        collide = self.move(self.moving_left, self.moving_right, self.moving_up, self.moving_down)
+        if self.move_counter > 100 or collide:
+            self.moving_right = not self.moving_right
+            self.moving_left = not self.moving_left
+            self.move_counter = 0
+        self.move_counter+=1
+
+
+class Beegfeesh(Enemy, pygame.sprite.Sprite):
+    def __init__(self, x, y, right):
+        pygame.sprite.Sprite.__init__(self)
+        feesh = SpriteSheet('img/tile/Enemies/feesh-big.png')
+        self.images = []
+        self.index = 0
+        self.elapsed = 0
+        self.height = 90
+        self. width = 100
+        self.hitbox = pygame.Rect(x+25, y+40, self.width, self.height)
+        for num in range(1, 5):
+            feesh_rect = ((54*(num-1)), 0, 54, 49)
+            self.img = feesh.image_at(feesh_rect, -1)
+            self.img = pygame.transform.scale(self.img, (160, 150))
+            self.images.append(self.img)
+        self.rect = self.img.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speedx = 10
+        self.speedy = 0
+        self.image = self.images[self.index]
+        self.move_counter = 0
+        if(right):
+            self.moving_right = True
+            self.moving_left = False
+        elif(not right):
+            self.moving_right = False
+            self.moving_left = True
+        self.moving_down = False
+        self.moving_up = False
+        self.moving = False
+        self.charging = False
+
+    def update(self):
+        pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
+        if self.rect.right > 0 and self.rect.left < screen_width:
+            self.ai()
+            if self.moving_right:
+                self.image = self.images[self.index]
+            elif self.moving_left:
+                self.image = pygame.transform.flip(
+                    self.images[self.index], True, False)
+            #add number of ticks transpired
+            self.elapsed += dt
+            #Limits update frequency
+            if self.elapsed >= 100:
+                self.index += 1
+                if self.index == 4:
+                    self.index = 0
+                self.elapsed = 0
+        #scroll
+        self.hitbox.x += screen_scroll
+        self.rect.x += screen_scroll
+
+    def ai(self):
+        collide = False
+        if (player.hitbox.y <= self.hitbox.y+(3*self.height)/4) and (player.hitbox.y >= self.hitbox.y+ self.height/4) and not self.charging:
+            self.speedx = 10
+            self.moving = True
+            self.charging = True
+        if self.moving:
+            collide = self.move(self.moving_left, self.moving_right, self.moving_up, self.moving_down)
+        if self.move_counter == 0:
+            if collide:
+                self.moving = False
+                self.moving_left = not self.moving_left
+                self.moving_right = not self.moving_right
+                if self.charging:
+                    self.move_counter+=1
+        elif self.move_counter <= 30:
+            self.move_counter += 1
+        elif self.move_counter>30:
+            self.speedx = 2
+            self.moving = True
+            self.move_counter = 0
+            self.charging = False
+
 
 def draw_bg():
     screen.fill((0,0,255))
@@ -507,6 +711,7 @@ mine_group = pygame.sprite.Group()
 feesh_group = pygame.sprite.Group()
 urchin_group = pygame.sprite.Group()
 chest_group = pygame.sprite.Group()
+beegfeesh_group = pygame.sprite.Group()
 world = World(world_data)
 playerspawn = world.process_data(world_data)
 player = Player(playerspawn[0], playerspawn[1])
@@ -566,10 +771,12 @@ while run:
         feesh_group.update()
         urchin_group.update()
         chest_group.update()
+        beegfeesh_group.update()
         #draw groups
         mine_group.draw(screen)
         feesh_group.draw(screen)
         urchin_group.draw(screen)
+        beegfeesh_group.draw(screen)
         chest_group.draw(screen)
     elif game_state ==4:
         screen.blit(complete_img, (screen_width//2-375,screen_height//3-100))

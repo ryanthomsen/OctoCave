@@ -31,7 +31,7 @@ game_state = 3
 screen_scroll = 0
 bg_scroll = 0
 playerspawn = [500, 500]
-level = 1
+level = 0
 numlevels = 2
 vec = pygame.math.Vector2
 #load tiles
@@ -86,20 +86,15 @@ class Button():
 class Enemy():
     #pass in a rectangle and speed in the x and y directions
     def __init__(self, image, x, y,  hitbox, speedx, speedy):
-        self.image = image
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
         self.hitbox = hitbox
         self.speedx = speedx
         self.speedy = speedy
         self.width = hitbox.width
-        self.heigh = hitbox.height
+        self.height = hitbox.height
     def move(self, moving_left, moving_right, moving_up, moving_down):
         collide = False
         dx = 0
         dy = 0
-        temp_rect = self.hitbox
         #x followed by y
         if moving_down:
             dy += self.speedy
@@ -110,11 +105,7 @@ class Enemy():
         if moving_left:
             dx -= self.speedx
         collide, dx, dy = self.collide(dx,dy)
-        self.rect.x += dx
-        self.hitbox.x += dx
-        self.rect.y += dy
-        self.hitbox.y += dy
-        return collide
+        return collide, dx, dy
 
     def collide(self, dx, dy):
         collide = False
@@ -280,7 +271,10 @@ class Player():
                     game_state = -1
             for urchin in urchin_group:
                 if urchin.hitbox.colliderect(temp_rect):
-                    game_state = -1        
+                    game_state = -1   
+            for beegfeesh in beegfeesh_group:
+                if beegfeesh.hitbox.colliderect(temp_rect):
+                    game_state = -1
             if pygame.sprite.spritecollide(self, chest_group, False):
                     game_state = 4
         return game_state
@@ -455,46 +449,28 @@ class Chest(pygame.sprite.Sprite):
 class Urchin(Enemy, pygame.sprite.Sprite):
     def __init__(self,x, y):
         pygame.sprite.Sprite.__init__(self)
-        #self.images = []
-        #self.index = 0
-        #self.count = 1
-        #if (direction == 1 or direction == 2):
-        #    for num in range (1, 5):
-        #        self.img = pygame.image.load(f'img/tile/Enemies/urchin{num}.png')
-        #        self.img = pygame.transform.scale(self.img, (54, 50))
-        #        self.hitbox = pygame.Rect(x+2, y+2, 48, 48)
-        #        if direction == 2:
-        #            self.hitbox.y-=5
-        #            self.img = pygame.transform.flip(self.img, True, True)
-        #        self.images.append(self.img)
-        #self.image = self.images[self.index]
         self.image = pygame.image.load('img/tile/Enemies/urchin.png')
         self.image = pygame.transform.scale(self.image, (50, 50))
-        self.hitbox = pygame.Rect(x+10, y+10, 30, 30)
+        self.width = 30
+        self.height = 30
+        self.hitbox = pygame.Rect(x+10, y+10, self.width, self.height)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.speedx = 1
         self.speedy = 2
-        self.width = 30
-        self.height = 30
         self.count = 0
     def update(self):
-        pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
-        #self.image = self.images[self.index]
-        #if(self.count%10 == 0):
-            #dosomething
-        #    self.index+=1
-        #if(self.count ==30):
-        #    self.count = 0
-        #    self.index = 0
-        #self.count+=1
+        #pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
         #scroll
         if self.rect.right > 0 and self.rect.left < screen_width:
             self.ai()
         self.hitbox.x+=screen_scroll
         self.rect.x+=screen_scroll   
     def ai(self):
+        dx = 0
+        dy = 0
+        collide = False
         #little hops back and forth, adorable
         self.count+=1
         moving_left = False
@@ -511,7 +487,10 @@ class Urchin(Enemy, pygame.sprite.Sprite):
             moving_down = True
         if self.count>=12: 
             self.count=0
-        self.move(moving_left, moving_right, moving_up, moving_down)
+        collide, dx, dy = self.move(moving_left, moving_right, moving_up, moving_down)
+        self.rect.x += dx
+        self.rect.y += dy
+        self.hitbox = pygame.Rect(self.rect.x+10, self.rect.y+10, self.width, self.height)
 
 
 
@@ -523,6 +502,10 @@ class Mine(Enemy, pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.width = 30
+        self.height = 30
+        self.count = 0
+        self.hitbox = pygame.Rect(x+6, y+8, self.width, self.height)
         self.speedx = 0
         Mine.direction+=1
         if Mine.direction==2:
@@ -530,12 +513,8 @@ class Mine(Enemy, pygame.sprite.Sprite):
         else:
             Mine.direction = 1
         self.speedy = Mine.direction * 2
-        self.width = 30
-        self.height = 30
-        self.count = 0
-        self.hitbox = pygame.Rect(x+6, y+8, self.width, self.height)
     def update(self):
-        pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
+        #pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
         if self.rect.right > 0 and self.rect.left < screen_width:
             self.ai()
         #scroll
@@ -548,14 +527,16 @@ class Mine(Enemy, pygame.sprite.Sprite):
         moving_right = False
         moving_down = False
         moving_up = True
-        collide = self.move(moving_left, moving_right, moving_up, moving_down)
+        collide, dx, dy = self.move(moving_left, moving_right, moving_up, moving_down)
+        self.rect.x += dx
+        self.rect.y += dy
+        self.hitbox = pygame.Rect(self.rect.x+6, self.rect.y+8, self.width, self.height)
         if collide:
             self.speedy *= -1
 
 class Feesh(Enemy, pygame.sprite.Sprite):
     def __init__(self,x, y):
             pygame.sprite.Sprite.__init__(self)
-            feesh = SpriteSheet('img/tile/Enemies/feesh.png')
             self.images = []
             self.index = 0
             self.elapsed = 0
@@ -564,11 +545,10 @@ class Feesh(Enemy, pygame.sprite.Sprite):
             self.hitbox = pygame.Rect(x+1, y+12+25, self.width, self.height)
             margin = 2
             for num in range(1, 5):
-                feesh_rect = ((margin*num)+(26*(num-1)), margin, 26, 20)
-                self.img = feesh.image_at(feesh_rect, -1)
-                self.img = pygame.transform.scale(self.img, (78, 60))
-                self.images.append(self.img)
-            self.rect = self.img.get_rect()
+                img = pygame.image.load(f'img/tile/Enemies/Feesh/{num}.png')
+                img = pygame.transform.scale(img, (78, 60))
+                self.images.append(img)
+            self.rect = img.get_rect()
             self.rect.x = x
             self.rect.y = y+25
             self.speedx = 3
@@ -580,7 +560,7 @@ class Feesh(Enemy, pygame.sprite.Sprite):
             self.moving_down = False
             self.moving_up = False
     def update(self):
-        pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
+        #pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
         if self.rect.right > 0 and self.rect.left < screen_width:
             self.ai()
             if self.moving_right:
@@ -600,7 +580,10 @@ class Feesh(Enemy, pygame.sprite.Sprite):
         self.rect.x+=screen_scroll
     def ai(self):
         collide=False
-        collide = self.move(self.moving_left, self.moving_right, self.moving_up, self.moving_down)
+        collide, dx, dy = self.move(self.moving_left, self.moving_right, self.moving_up, self.moving_down)
+        self.rect.x += dx
+        self.rect.y += dy
+        self.hitbox = pygame.Rect(self.rect.x+1, self.rect.y+12, self.width, self.height)
         if self.move_counter > 100 or collide:
             self.moving_right = not self.moving_right
             self.moving_left = not self.moving_left
@@ -611,22 +594,20 @@ class Feesh(Enemy, pygame.sprite.Sprite):
 class Beegfeesh(Enemy, pygame.sprite.Sprite):
     def __init__(self, x, y, right):
         pygame.sprite.Sprite.__init__(self)
-        feesh = SpriteSheet('img/tile/Enemies/feesh-big.png')
         self.images = []
         self.index = 0
         self.elapsed = 0
         self.height = 90
         self. width = 100
-        self.hitbox = pygame.Rect(x+25, y+40, self.width, self.height)
+        self.hitbox = pygame.Rect(x+25, y+20, self.width, self.height)
         for num in range(1, 5):
-            feesh_rect = ((54*(num-1)), 0, 54, 49)
-            self.img = feesh.image_at(feesh_rect, -1)
-            self.img = pygame.transform.scale(self.img, (160, 150))
-            self.images.append(self.img)
-        self.rect = self.img.get_rect()
+            img = pygame.image.load(f'img/tile/Enemies/Beeg_Feesh/{num}.png')
+            img = pygame.transform.scale(img, (160, 150))
+            self.images.append(img)
+        self.rect = img.get_rect()
         self.rect.x = x
-        self.rect.y = y
-        self.speedx = 10
+        self.rect.y = y-20
+        self.speedx = 15
         self.speedy = 0
         self.image = self.images[self.index]
         self.move_counter = 0
@@ -642,7 +623,7 @@ class Beegfeesh(Enemy, pygame.sprite.Sprite):
         self.charging = False
 
     def update(self):
-        pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
+        #pygame.draw.rect(screen, (255,0,255), self.hitbox, 2)
         if self.rect.right > 0 and self.rect.left < screen_width:
             self.ai()
             if self.moving_right:
@@ -663,13 +644,19 @@ class Beegfeesh(Enemy, pygame.sprite.Sprite):
         self.rect.x += screen_scroll
 
     def ai(self):
+        dx = 0
+        dy = 0
         collide = False
-        if (player.hitbox.y <= self.hitbox.y+(3*self.height)/4) and (player.hitbox.y >= self.hitbox.y+ self.height/4) and not self.charging:
-            self.speedx = 10
-            self.moving = True
-            self.charging = True
+        if (self.moving_left and player.hitbox.x < self.hitbox.x) or (self.moving_right and player.hitbox.x > self.hitbox.x):
+            if (player.hitbox.y <= self.hitbox.y+self.height+25) and (player.hitbox.y >= self.hitbox.y-25) and not self.charging:
+                self.speedx = 15
+                self.moving = True
+                self.charging = True
         if self.moving:
-            collide = self.move(self.moving_left, self.moving_right, self.moving_up, self.moving_down)
+            collide, dx, dy = self.move(self.moving_left, self.moving_right, self.moving_up, self.moving_down)
+            self.rect.x += dx
+            self.rect.y += dy
+            self.hitbox = pygame.Rect(self.rect.x+25, self.rect.y+20, self.width, self.height)
         if self.move_counter == 0:
             if collide:
                 self.moving = False

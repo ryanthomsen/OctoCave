@@ -32,7 +32,7 @@ game_state = 3
 screen_scroll = 0
 bg_scroll = 0
 playerspawn = [500, 500]
-level = 1
+level = 0
 numlevels = 2
 vec = pygame.math.Vector2
 #load tiles

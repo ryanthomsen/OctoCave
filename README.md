@@ -1,4 +1,4 @@
-# Tentacave (Working game title)
+# OctoCave (Working game title)
 
 A simple underwater game with a Vector based movement system that accelerates as you continue in a direction and slows down with water resistance.
 Play as an octopus traversing the undersea caverns avoiding the enemies along the way.

@@ -1,24 +1,17 @@
+#Level editor for easier creation of tile based levels
 import pygame
 import button
 import csv
 import pickle
-
+from image_loader import *
 pygame.init()
+import config
 
-clock = pygame.time.Clock()
-FPS = 60
-
-#game window
+#game window variables
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 640
 LOWER_MARGIN = 100
 SIDE_MARGIN = 300
-
-screen = pygame.display.set_mode((SCREEN_WIDTH + SIDE_MARGIN, SCREEN_HEIGHT + LOWER_MARGIN))
-pygame.display.set_caption('Level Editor')
-
-
-#define game variables
 ROWS = 16
 MAX_COLS = 150
 TILE_SIZE = SCREEN_HEIGHT // ROWS
@@ -30,18 +23,22 @@ scroll_right = False
 scroll = 0
 scroll_speed = 1
 
+screen = pygame.display.set_mode((SCREEN_WIDTH + SIDE_MARGIN, SCREEN_HEIGHT + LOWER_MARGIN))
+pygame.display.set_caption('Level Editor')
 
-#load images
+
+#load images for display
 ocean_img = pygame.image.load('img/Background/ocean.png').convert_alpha()
 #store tiles in a list
 img_list = []
 for x in range(TILE_TYPES):
-	img = pygame.image.load(f'img/tile/{x}.png').convert_alpha()
+	img = pygame.image.load(f'img/tiles/{x}.png').convert_alpha()
 	img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
 	img_list.append(img)
 
-save_img = pygame.image.load('img/save_btn.png').convert_alpha()
-load_img = pygame.image.load('img/load_btn.png').convert_alpha()
+#Images for buttons used within the level editor
+save_img = pygame.image.load('img/buttons/save_btn.png').convert_alpha()
+load_img = pygame.image.load('img/buttons/load_btn.png').convert_alpha()
 
 
 #define colours
@@ -117,7 +114,7 @@ for i in range(len(img_list)):
 run = True
 while run:
 
-	clock.tick(FPS)
+	config.clock.tick(config.FPS)
 
 	draw_bg()
 	draw_grid()
